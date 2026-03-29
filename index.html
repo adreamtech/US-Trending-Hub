@@ -212,13 +212,26 @@
             font-weight: 800;
             color: #1a1a2e;
             line-height: 1.5;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         .card-title a {
             color: inherit;
             text-decoration: none;
         }
         .card-title a:hover { color: #2d3a8c; }
+
+        .card-title-en {
+            font-size: 0.82rem;
+            color: #999;
+            line-height: 1.5;
+            margin-bottom: 10px;
+            font-weight: 400;
+        }
+        .card-title-en a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .card-title-en a:hover { text-decoration: underline; }
 
         .card-summary {
             font-size: 0.88rem;
@@ -240,10 +253,12 @@
             transition: opacity 0.2s;
         }
         .card-sources a:hover { opacity: 0.7; }
-        .card-sources a.reddit { color: #ff4500; }
-        .card-sources a.hackernews { color: #ff6600; }
-        .card-sources a.github { color: #333; }
-        .card-sources a.news { color: #27ae60; }
+        .card-sources a.twitter { color: #1da1f2; }
+        .card-sources a.google { color: #4285f4; }
+        .card-sources a.cnn { color: #cc0000; }
+        .card-sources a.npr { color: #6b93c1; }
+        .card-sources a.espn { color: #d00; }
+        .card-sources a.variety { color: #e71d36; }
 
         /* Footer */
         footer {
@@ -291,14 +306,16 @@
             </div>
             <div class="header-info">
                 <div class="header-date" id="headerDate"></div>
-                <div class="header-desc">综合美国各大平台热点，交叉验证后精选 TOP 5</div>
+                <div class="header-desc">综合美国各大平台热点，交叉验证后精选 TOP 5（中文翻译）</div>
             </div>
         </div>
         <div class="toolbar" id="toolbar">
-            <span class="platform-tag" data-src="reddit"><span class="dot"></span>Reddit</span>
-            <span class="platform-tag" data-src="hackernews"><span class="dot"></span>Hacker News</span>
-            <span class="platform-tag" data-src="github"><span class="dot"></span>GitHub</span>
-            <span class="platform-tag" data-src="news"><span class="dot"></span>News</span>
+            <span class="platform-tag" data-src="twitter"><span class="dot"></span>Twitter/X</span>
+            <span class="platform-tag" data-src="google"><span class="dot"></span>Google Trends</span>
+            <span class="platform-tag" data-src="cnn"><span class="dot"></span>CNN</span>
+            <span class="platform-tag" data-src="npr"><span class="dot"></span>NPR</span>
+            <span class="platform-tag" data-src="espn"><span class="dot"></span>ESPN</span>
+            <span class="platform-tag" data-src="variety"><span class="dot"></span>Variety</span>
             <button class="refresh-btn" onclick="fetchAll()">
                 <span class="icon">&#x21bb;</span> 刷新
             </button>
@@ -311,22 +328,25 @@
         <div class="spinner"></div>
         <div class="loading-text">正在从多个平台抓取热点数据...</div>
         <div class="loading-steps">
-            <div class="loading-step" data-src="reddit">⬜ Reddit</div>
-            <div class="loading-step" data-src="hackernews">⬜ Hacker News</div>
-            <div class="loading-step" data-src="github">⬜ GitHub Trending</div>
-            <div class="loading-step" data-src="news">⬜ 主流新闻</div>
+            <div class="loading-step" data-src="twitter">⬜ Twitter/X</div>
+            <div class="loading-step" data-src="google">⬜ Google Trends</div>
+            <div class="loading-step" data-src="cnn">⬜ CNN</div>
+            <div class="loading-step" data-src="npr">⬜ NPR</div>
+            <div class="loading-step" data-src="espn">⬜ ESPN</div>
+            <div class="loading-step" data-src="variety">⬜ Variety</div>
+            <div class="loading-step" data-src="translate">⬜ 翻译中...</div>
         </div>
     </div>
 
     <div id="top5Section" style="display:none;"></div>
 
     <div class="algo-note" id="algoNote" style="display:none;">
-        <strong>交叉验证：</strong>从 Reddit、Hacker News、GitHub、主流新闻获取热点 →
-        关键词提取 + 语义匹配 + 多源出现频率加权 → 跨平台共同关注的 TOP 5
+        <strong>交叉验证：</strong>从 Twitter/X、Google Trends、CNN、NPR、ESPN、Variety 获取热点 →
+        关键词提取 + 语义匹配 + 多源出现频率加权 → 跨平台共同关注的 TOP 5 → 自动翻译为中文
     </div>
 
     <footer>
-        今日美国热点 &copy; 2026 &mdash; 数据来源: Reddit &middot; Hacker News &middot; GitHub &middot; News
+        今日美国热点 &copy; 2026 &mdash; 数据来源: Twitter/X &middot; Google Trends &middot; CNN &middot; NPR &middot; ESPN &middot; Variety
     </footer>
 </div>
 
@@ -338,7 +358,6 @@ function formatNumber(n) {
     if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
     return String(n);
 }
-function getDateAgo(d) { const t=new Date(); t.setDate(t.getDate()-d); return t.toISOString().split('T')[0]; }
 function dedupeByTitle(items) {
     const seen = new Set();
     return items.filter(it => {
@@ -358,7 +377,6 @@ function dedupeByTitle(items) {
 
 // ========== Loading UI ==========
 function setStepStatus(src, status) {
-    // Loading step
     const step = document.querySelector(`.loading-step[data-src="${src}"]`);
     if (step) {
         step.classList.remove('active','done');
@@ -367,7 +385,6 @@ function setStepStatus(src, status) {
         else if (status==='done') { step.classList.add('done'); step.textContent = '✅ '+name; }
         else if (status==='error') { step.textContent = '❌ '+name; }
     }
-    // Toolbar dot
     const tag = document.querySelector(`.platform-tag[data-src="${src}"] .dot`);
     if (tag) {
         tag.className = 'dot';
@@ -377,102 +394,263 @@ function setStepStatus(src, status) {
     }
 }
 
+// ========== RSS Helper ==========
+const RSS2JSON = 'https://api.rss2json.com/v1/api.json?rss_url=';
+const ALLORIGINS = 'https://api.allorigins.win/get?url=';
+
+async function fetchRSS(url) {
+    const r = await fetch(RSS2JSON + encodeURIComponent(url));
+    if (!r.ok) throw new Error('RSS fetch failed');
+    const d = await r.json();
+    if (d.status !== 'ok') throw new Error('RSS parse failed');
+    return d.items || [];
+}
+
+async function fetchViaProxy(url) {
+    const r = await fetch(ALLORIGINS + encodeURIComponent(url));
+    if (!r.ok) throw new Error('Proxy fetch failed');
+    const d = await r.json();
+    return d.contents || '';
+}
+
 // ========== Data Fetching ==========
-async function fetchReddit() {
-    setStepStatus('reddit','loading');
-    try {
-        const subs = ['popular','news','worldnews','technology'];
-        const results = [];
-        for (const sub of subs) {
-            try {
-                const r = await fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=10&t=day`,
-                    { headers:{'User-Agent':'TrendingHub/1.0'} });
-                if (!r.ok) continue;
-                const d = await r.json();
-                d.data.children.forEach(c => results.push({
-                    title: c.data.title, score: c.data.score,
-                    comments: c.data.num_comments,
-                    url: `https://reddit.com${c.data.permalink}`,
-                    subreddit: c.data.subreddit
-                }));
-            } catch(e){}
-        }
-        const unique = dedupeByTitle(results);
-        unique.sort((a,b)=>b.score-a.score);
-        setStepStatus('reddit','done');
-        return { source:'reddit', items: unique.slice(0,15) };
-    } catch(e) {
-        setStepStatus('reddit','error');
-        return { source:'reddit', items:[], error:e.message };
-    }
-}
 
-async function fetchHackerNews() {
-    setStepStatus('hackernews','loading');
-    try {
-        const r = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
-        const ids = await r.json();
-        const stories = await Promise.all(
-            ids.slice(0,20).map(id =>
-                fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r=>r.json()).catch(()=>null)
-            )
-        );
-        const items = stories.filter(s=>s&&s.title).map(s=>({
-            title: s.title, score: s.score||0, comments: s.descendants||0,
-            url: s.url || `https://news.ycombinator.com/item?id=${s.id}`
-        }));
-        setStepStatus('hackernews','done');
-        return { source:'hackernews', items: items.slice(0,15) };
-    } catch(e) {
-        setStepStatus('hackernews','error');
-        return { source:'hackernews', items:[], error:e.message };
-    }
-}
-
-async function fetchGitHub() {
-    setStepStatus('github','loading');
-    try {
-        const r = await fetch('https://api.github.com/search/repositories?q=created:>'+getDateAgo(7)+'&sort=stars&order=desc&per_page=20');
-        if (!r.ok) throw new Error('GitHub API error');
-        const d = await r.json();
-        const items = d.items.filter(r=>r.stargazers_count<200000).map(r=>({
-            title: `${r.full_name}: ${r.description||''}`.slice(0,120),
-            score: r.stargazers_count, comments: r.open_issues_count,
-            url: r.html_url, language: r.language
-        }));
-        setStepStatus('github','done');
-        return { source:'github', items: items.slice(0,15) };
-    } catch(e) {
-        setStepStatus('github','error');
-        return { source:'github', items:[], error:e.message };
-    }
-}
-
-async function fetchNews() {
-    setStepStatus('news','loading');
+// 1. Twitter/X — use Nitter RSS instances or fallback to trends aggregator
+async function fetchTwitter() {
+    setStepStatus('twitter','loading');
     try {
         const results = [];
+
+        // Try fetching trending via proxy scraping from trends aggregator
         try {
-            const r = await fetch('https://www.reddit.com/r/news+worldnews+politics/top.json?limit=15&t=day',
-                { headers:{'User-Agent':'TrendingHub/1.0'} });
-            if (r.ok) {
-                const d = await r.json();
-                d.data.children.forEach(c => {
-                    if (c.data.domain && !c.data.domain.includes('reddit.com')) {
+            const html = await fetchViaProxy('https://getdaytrends.com/united-states/');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const rows = doc.querySelectorAll('table.table tbody tr');
+            rows.forEach((row, i) => {
+                if (i >= 15) return;
+                const nameEl = row.querySelector('td a');
+                if (nameEl) {
+                    const title = nameEl.textContent.trim().replace(/^#/, '');
+                    const volEl = row.querySelector('td:last-child');
+                    const vol = volEl ? parseInt(volEl.textContent.replace(/[^0-9]/g,'')) || 0 : 0;
+                    if (title) results.push({
+                        title: title,
+                        score: vol || (15 - i) * 100,
+                        comments: 0,
+                        url: `https://x.com/search?q=${encodeURIComponent(title)}`
+                    });
+                }
+            });
+        } catch(e) {}
+
+        // Fallback: parse trending from HTML tags
+        if (results.length === 0) {
+            try {
+                const html = await fetchViaProxy('https://trends24.in/united-states/');
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('.trend-card__list a');
+                const seen = new Set();
+                links.forEach((a, i) => {
+                    if (seen.size >= 15) return;
+                    const title = a.textContent.trim().replace(/^#/, '');
+                    if (title && !seen.has(title.toLowerCase())) {
+                        seen.add(title.toLowerCase());
                         results.push({
-                            title: c.data.title, score: c.data.score,
-                            comments: c.data.num_comments,
-                            url: c.data.url, domain: c.data.domain
+                            title: title,
+                            score: (20 - seen.size) * 100,
+                            comments: 0,
+                            url: `https://x.com/search?q=${encodeURIComponent(title)}`
                         });
                     }
                 });
-            }
-        } catch(e){}
-        setStepStatus('news', results.length>0?'done':'error');
-        return { source:'news', items: results.slice(0,15) };
+            } catch(e) {}
+        }
+
+        setStepStatus('twitter', results.length > 0 ? 'done' : 'error');
+        return { source:'twitter', items: dedupeByTitle(results).slice(0,15) };
     } catch(e) {
-        setStepStatus('news','error');
-        return { source:'news', items:[], error:e.message };
+        setStepStatus('twitter','error');
+        return { source:'twitter', items:[], error:e.message };
+    }
+}
+
+// 2. Google Trends
+async function fetchGoogleTrends() {
+    setStepStatus('google','loading');
+    try {
+        const items = [];
+
+        // Google Trends RSS
+        try {
+            const rssItems = await fetchRSS('https://trends.google.com/trending/rss?geo=US');
+            rssItems.forEach((item, i) => {
+                items.push({
+                    title: item.title,
+                    score: (20 - i) * 200,
+                    comments: 0,
+                    url: item.link || `https://trends.google.com/trending?geo=US`
+                });
+            });
+        } catch(e) {}
+
+        // Fallback: proxy fetch Google Trends page
+        if (items.length === 0) {
+            try {
+                const html = await fetchViaProxy('https://trends.google.com/trending?geo=US&hours=24');
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                // Try extracting from various selectors
+                const els = doc.querySelectorAll('[data-trending] a, .feed-item a, .details-top a');
+                const seen = new Set();
+                els.forEach(a => {
+                    const t = a.textContent.trim();
+                    if (t && t.length > 2 && !seen.has(t.toLowerCase()) && seen.size < 15) {
+                        seen.add(t.toLowerCase());
+                        items.push({
+                            title: t,
+                            score: (15 - seen.size) * 200,
+                            comments: 0,
+                            url: a.href || 'https://trends.google.com/trending?geo=US'
+                        });
+                    }
+                });
+            } catch(e) {}
+        }
+
+        setStepStatus('google', items.length > 0 ? 'done' : 'error');
+        return { source:'google', items: dedupeByTitle(items).slice(0,15) };
+    } catch(e) {
+        setStepStatus('google','error');
+        return { source:'google', items:[], error:e.message };
+    }
+}
+
+// 3. CNN
+async function fetchCNN() {
+    setStepStatus('cnn','loading');
+    try {
+        let rssItems = [];
+        try {
+            rssItems = await fetchRSS('http://rss.cnn.com/rss/cnn_topstories.rss');
+        } catch(e1) {
+            // Fallback: fetch via allorigins proxy + parse
+            const html = await fetchViaProxy('https://lite.cnn.com/');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const links = doc.querySelectorAll('a');
+            links.forEach(a => {
+                const t = a.textContent.trim();
+                if (t && t.length > 15 && rssItems.length < 15) {
+                    rssItems.push({ title: t, link: a.href || 'https://cnn.com' });
+                }
+            });
+        }
+        const items = rssItems.map((item, i) => ({
+            title: item.title,
+            score: (20 - i) * 150,
+            comments: 0,
+            url: item.link,
+            domain: 'cnn.com'
+        }));
+        setStepStatus('cnn','done');
+        return { source:'cnn', items: dedupeByTitle(items).slice(0,15) };
+    } catch(e) {
+        setStepStatus('cnn','error');
+        return { source:'cnn', items:[], error:e.message };
+    }
+}
+
+// 4. NPR
+async function fetchNPR() {
+    setStepStatus('npr','loading');
+    try {
+        const rssItems = await fetchRSS('https://feeds.npr.org/1001/rss.xml');
+        const items = rssItems.map((item, i) => ({
+            title: item.title,
+            score: (20 - i) * 120,
+            comments: 0,
+            url: item.link,
+            domain: 'npr.org'
+        }));
+        setStepStatus('npr','done');
+        return { source:'npr', items: dedupeByTitle(items).slice(0,15) };
+    } catch(e) {
+        setStepStatus('npr','error');
+        return { source:'npr', items:[], error:e.message };
+    }
+}
+
+// 5. ESPN
+async function fetchESPN() {
+    setStepStatus('espn','loading');
+    try {
+        const rssItems = await fetchRSS('https://www.espn.com/espn/rss/news');
+        const items = rssItems.map((item, i) => ({
+            title: item.title,
+            score: (20 - i) * 130,
+            comments: 0,
+            url: item.link,
+            domain: 'espn.com'
+        }));
+        setStepStatus('espn','done');
+        return { source:'espn', items: dedupeByTitle(items).slice(0,15) };
+    } catch(e) {
+        setStepStatus('espn','error');
+        return { source:'espn', items:[], error:e.message };
+    }
+}
+
+// 6. Variety
+async function fetchVariety() {
+    setStepStatus('variety','loading');
+    try {
+        const rssItems = await fetchRSS('https://variety.com/feed/');
+        const items = rssItems.map((item, i) => ({
+            title: item.title,
+            score: (20 - i) * 110,
+            comments: 0,
+            url: item.link,
+            domain: 'variety.com'
+        }));
+        setStepStatus('variety','done');
+        return { source:'variety', items: dedupeByTitle(items).slice(0,15) };
+    } catch(e) {
+        setStepStatus('variety','error');
+        return { source:'variety', items:[], error:e.message };
+    }
+}
+
+// ========== Translation ==========
+async function translateText(text) {
+    try {
+        // Clean up title for better translation
+        const cleanText = text.replace(/\s*\|\s*.*$/, '').replace(/\s*-\s*[A-Z].*$/, '').trim();
+        const r = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(cleanText.slice(0,500))}&langpair=en|zh-CN`);
+        if (!r.ok) return text;
+        const d = await r.json();
+        const translated = d.responseData && d.responseData.translatedText;
+        if (translated && !translated.includes('MYMEMORY') && translated.toLowerCase() !== cleanText.toLowerCase()) {
+            // Fix common mistranslations of proper nouns
+            return translated.charAt(0).toUpperCase() + translated.slice(1);
+        }
+        return text;
+    } catch(e) {
+        return text;
+    }
+}
+
+async function translateClusters(clusters) {
+    setStepStatus('translate','loading');
+    try {
+        for (const cluster of clusters) {
+            const title = cluster.bestItem.title;
+            cluster.titleZh = await translateText(title);
+        }
+        setStepStatus('translate','done');
+    } catch(e) {
+        setStepStatus('translate','error');
     }
 }
 
@@ -519,6 +697,15 @@ function crossValidate(allSources) {
         for (const item of src.items)
             all.push({ ...item, source:src.source, keywords:extractKeywords(item.title) });
 
+    // Also check if any keyword from one item appears in the full title of another
+    function titleContainsKeyword(title, keywords) {
+        const t = title.toLowerCase();
+        for (const kw of keywords) {
+            if (kw.length >= 4 && t.includes(kw)) return true;
+        }
+        return false;
+    }
+
     const clusters=[], used=new Set();
     for (let i=0; i<all.length; i++) {
         if (used.has(i)) continue;
@@ -527,7 +714,10 @@ function crossValidate(allSources) {
         used.add(i);
         for (let j=i+1; j<all.length; j++) {
             if (used.has(j)) continue;
-            if (calcSimilarity([...c.keywords], all[j].keywords) >= 0.25) {
+            const sim = calcSimilarity([...c.keywords], all[j].keywords);
+            const titleMatch = titleContainsKeyword(all[j].title, [...c.keywords]) ||
+                               titleContainsKeyword(all[i].title, all[j].keywords);
+            if (sim >= 0.15 || titleMatch) {
                 c.items.push(all[j]); c.sources.add(all[j].source);
                 all[j].keywords.forEach(k=>c.keywords.add(k));
                 c.totalScore += all[j].score||0;
@@ -541,9 +731,15 @@ function crossValidate(allSources) {
         const sc = c.sources.size;
         const avg = c.totalScore / c.items.length;
         const comm = c.items.reduce((s,it)=>s+(it.comments||0),0);
-        c.finalScore = (sc**2)*1000 + avg + comm*0.5;
+        // Heavily favor multi-source clusters
+        c.finalScore = (sc**2.5)*1000 + avg + comm*0.5 + c.items.length*50;
         c.sourceCount = sc;
-        c.items.sort((a,b)=>(b.score||0)-(a.score||0));
+        // Pick the item with the longest, most descriptive title as best
+        c.items.sort((a,b) => {
+            if (a.title.length > 30 && b.title.length <= 30) return -1;
+            if (b.title.length > 30 && a.title.length <= 30) return 1;
+            return (b.score||0)-(a.score||0);
+        });
         c.bestItem = c.items[0];
     });
     clusters.sort((a,b)=>b.finalScore-a.finalScore);
@@ -560,7 +756,7 @@ function detectCategory(keywords, title) {
         { keys:['tech','apple','google','microsoft','amazon','meta','software','app','startup','silicon','chip','semiconductor','crypto','bitcoin','blockchain','computing'], label:'科技' },
         { keys:['stock','market','economy','inflation','fed','interest rate','gdp','trade','tariff','recession','bank','financial','wall street','dow','nasdaq','earnings'], label:'财经' },
         { keys:['nba','nfl','mlb','nhl','football','basketball','baseball','soccer','sport','game','player','team','coach','season','champion','playoff','match','espn','athlete'], label:'体育' },
-        { keys:['movie','film','oscar','music','album','celebrity','entertainment','hollywood','netflix','disney','streaming','show','series','actor','singer','concert','award'], label:'娱乐' },
+        { keys:['movie','film','oscar','music','album','celebrity','entertainment','hollywood','netflix','disney','streaming','show','series','actor','singer','concert','award','emmy','grammy','box office','snl','monologue','drama','premiere','release','trailer','studio','variety'], label:'娱乐' },
         { keys:['health','covid','virus','vaccine','disease','medical','hospital','drug','fda','cancer','treatment','mental','doctor','patient'], label:'健康' },
         { keys:['climate','environment','earthquake','hurricane','flood','fire','weather','tornado','storm','disaster','wildfire'], label:'自然 · 气候' },
         { keys:['space','nasa','spacex','rocket','mars','moon','satellite','orbit','launch','astronaut','telescope'], label:'太空' },
@@ -578,10 +774,10 @@ function detectCategory(keywords, title) {
 function renderTop5(clusters) {
     const section = document.getElementById('top5Section');
     const sourceLabels = {
-        reddit:'Reddit', hackernews:'Hacker News', github:'GitHub', news:'News'
+        twitter:'Twitter/X', google:'Google Trends', cnn:'CNN', npr:'NPR', espn:'ESPN', variety:'Variety'
     };
     const sourceClasses = {
-        reddit:'reddit', hackernews:'hackernews', github:'github', news:'news'
+        twitter:'twitter', google:'google', cnn:'cnn', npr:'npr', espn:'espn', variety:'variety'
     };
 
     let html = '';
@@ -589,15 +785,16 @@ function renderTop5(clusters) {
         const item = cluster.bestItem;
         const cat = detectCategory([...cluster.keywords], item.title);
         const num = String(idx+1).padStart(2,'0');
+        const titleZh = cluster.titleZh || item.title;
+        const titleEn = item.title;
 
         // Build summary
         let summary = '';
         if (cluster.sourceCount > 1) {
-            summary = `该话题在 ${cluster.sourceCount} 个平台被同时关注，共 ${cluster.items.length} 条相关内容，总互动量达 ${formatNumber(cluster.totalScore)}。`;
+            summary = `该话题在 ${cluster.sourceCount} 个平台被同时关注，共 ${cluster.items.length} 条相关内容。`;
         } else {
-            summary = `热度评分 ${formatNumber(cluster.totalScore)}，${cluster.items[0].comments ? '评论 '+formatNumber(cluster.items[0].comments)+' 条。' : ''}`;
+            summary = `来源：${sourceLabels[item.source] || item.source}`;
         }
-        // Add other titles as context
         if (cluster.items.length > 1) {
             const others = cluster.items.slice(1,3).map(it => escapeHtml(it.title.slice(0,60))).join('；');
             summary += ` 相关：${others}`;
@@ -616,7 +813,10 @@ function renderTop5(clusters) {
             <div class="card-body">
                 <div class="card-category">${cat}</div>
                 <div class="card-title">
-                    <a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
+                    <a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(titleZh)}</a>
+                </div>
+                <div class="card-title-en">
+                    <a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(titleEn)}</a>
                 </div>
                 <div class="card-summary">${summary}</div>
                 <div class="card-sources">${links}</div>
@@ -644,11 +844,14 @@ async function fetchAll() {
     });
 
     try {
-        const [reddit, hn, github, news] = await Promise.all([
-            fetchReddit(), fetchHackerNews(), fetchGitHub(), fetchNews()
+        const [twitter, google, cnn, npr, espn, variety] = await Promise.all([
+            fetchTwitter(), fetchGoogleTrends(), fetchCNN(), fetchNPR(), fetchESPN(), fetchVariety()
         ]);
-        const allSources = [reddit, hn, github, news];
+        const allSources = [twitter, google, cnn, npr, espn, variety];
         const top5 = crossValidate(allSources);
+
+        // Translate top 5 titles to Chinese
+        await translateClusters(top5);
 
         document.getElementById('loadingSection').style.display = 'none';
         renderTop5(top5);
