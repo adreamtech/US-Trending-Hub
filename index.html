@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日美国热点 - Today's Hot Topics</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f4f5f7;
+            color: #1a1a2e;
+            min-height: 100vh;
+        }
+
+        /* Header bar */
+        .header-bar {
+            background: #e8eaf0;
+            padding: 32px 0 24px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        .header-top {
+            display: flex;
+            align-items: flex-end;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .brand h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #2d3a8c;
+            line-height: 1.1;
+        }
+        .brand .sub {
+            font-size: 0.85rem;
+            color: #c0392b;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+        .header-info {
+            flex: 1;
+        }
+        .header-date {
+            font-size: 0.95rem;
+            color: #555;
+            margin-bottom: 2px;
+        }
+        .header-desc {
+            font-size: 0.82rem;
+            color: #888;
+        }
+
+        /* Platform tags + refresh */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .platform-tag {
+            padding: 5px 16px;
+            border-radius: 18px;
+            font-size: 0.8rem;
+            color: #555;
+            background: #fff;
+            border: 1px solid #ddd;
+            cursor: default;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .platform-tag .dot {
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #ccc;
+        }
+        .platform-tag .dot.ok { background: #27ae60; }
+        .platform-tag .dot.err { background: #e74c3c; }
+        .platform-tag .dot.loading { background: #f39c12; animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0%,100% { opacity:1; } 50% { opacity:0.4; }
+        }
+        .refresh-btn {
+            margin-left: auto;
+            padding: 8px 22px;
+            border-radius: 20px;
+            border: none;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s;
+        }
+        .refresh-btn:hover { opacity: 0.85; }
+        .refresh-btn.loading { pointer-events: none; opacity: 0.6; }
+        .refresh-btn.loading .icon { animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Loading */
+        .loading-section {
+            text-align: center;
+            padding: 80px 20px;
+        }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #e0e0e0;
+            border-top-color: #6c5ce7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+        .loading-text { color: #888; font-size: 0.9rem; }
+        .loading-steps {
+            margin-top: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .loading-step {
+            font-size: 0.8rem;
+            color: #aaa;
+        }
+        .loading-step.active { color: #6c5ce7; }
+        .loading-step.done { color: #27ae60; }
+
+        /* Main content */
+        .main { padding: 24px 0 60px; }
+
+        /* TOP card */
+        .top-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 28px 32px 24px 28px;
+            margin-bottom: 18px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #eee;
+            transition: box-shadow 0.3s;
+            animation: cardIn 0.4s ease-out both;
+        }
+        .top-card:hover {
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .top-card:nth-child(1) { animation-delay: 0.05s; }
+        .top-card:nth-child(2) { animation-delay: 0.1s; }
+        .top-card:nth-child(3) { animation-delay: 0.15s; }
+        .top-card:nth-child(4) { animation-delay: 0.2s; }
+        .top-card:nth-child(5) { animation-delay: 0.25s; }
+
+        /* Left color border */
+        .top-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 5px; height: 100%;
+        }
+        .top-card:nth-child(1)::before { background: linear-gradient(180deg, #e74c3c, #f39c12); }
+        .top-card:nth-child(2)::before { background: linear-gradient(180deg, #e67e22, #f1c40f); }
+        .top-card:nth-child(3)::before { background: linear-gradient(180deg, #2ecc71, #1abc9c); }
+        .top-card:nth-child(4)::before { background: linear-gradient(180deg, #3498db, #6c5ce7); }
+        .top-card:nth-child(5)::before { background: linear-gradient(180deg, #9b59b6, #e91e63); }
+
+        /* Large rank number on right */
+        .card-rank-bg {
+            position: absolute;
+            right: 24px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 5.5rem;
+            font-weight: 900;
+            line-height: 1;
+            pointer-events: none;
+            user-select: none;
+        }
+        .top-card:nth-child(1) .card-rank-bg { color: rgba(231,76,60,0.12); }
+        .top-card:nth-child(2) .card-rank-bg { color: rgba(230,126,34,0.12); }
+        .top-card:nth-child(3) .card-rank-bg { color: rgba(46,204,113,0.10); }
+        .top-card:nth-child(4) .card-rank-bg { color: rgba(52,152,219,0.10); }
+        .top-card:nth-child(5) .card-rank-bg { color: rgba(155,89,182,0.10); }
+
+        .card-body { position: relative; z-index: 1; padding-right: 70px; }
+
+        /* Category label */
+        .card-category {
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .top-card:nth-child(1) .card-category { color: #e74c3c; }
+        .top-card:nth-child(2) .card-category { color: #e67e22; }
+        .top-card:nth-child(3) .card-category { color: #27ae60; }
+        .top-card:nth-child(4) .card-category { color: #2980b9; }
+        .top-card:nth-child(5) .card-category { color: #8e44ad; }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #1a1a2e;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+        .card-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .card-title a:hover { color: #2d3a8c; }
+
+        .card-summary {
+            font-size: 0.88rem;
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 14px;
+        }
+
+        /* Source links */
+        .card-sources {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .card-sources a {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .card-sources a:hover { opacity: 0.7; }
+        .card-sources a.reddit { color: #ff4500; }
+        .card-sources a.hackernews { color: #ff6600; }
+        .card-sources a.github { color: #333; }
+        .card-sources a.news { color: #27ae60; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 32px 0;
+            color: #aaa;
+            font-size: 0.75rem;
+            border-top: 1px solid #e8e8e8;
+            margin-top: 20px;
+        }
+        .algo-note {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 0.78rem;
+            line-height: 1.8;
+            background: #fff;
+            border-radius: 10px;
+            border: 1px solid #eee;
+            margin-top: 12px;
+        }
+        .algo-note strong { color: #6c5ce7; }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .brand h1 { font-size: 1.6rem; }
+            .header-top { gap: 12px; }
+            .top-card { padding: 20px 18px 18px 20px; }
+            .card-title { font-size: 1rem; }
+            .card-rank-bg { font-size: 3.5rem; right: 12px; }
+            .card-body { padding-right: 40px; }
+            .toolbar { gap: 6px; }
+            .platform-tag { padding: 4px 10px; font-size: 0.72rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-bar">
+    <div class="container">
+        <div class="header-top">
+            <div class="brand">
+                <h1>今日美国热点</h1>
+                <div class="sub">Today's Hot Topics</div>
+            </div>
+            <div class="header-info">
+                <div class="header-date" id="headerDate"></div>
+                <div class="header-desc">综合美国各大平台热点，交叉验证后精选 TOP 5</div>
+            </div>
+        </div>
+        <div class="toolbar" id="toolbar">
+            <span class="platform-tag" data-src="reddit"><span class="dot"></span>Reddit</span>
+            <span class="platform-tag" data-src="hackernews"><span class="dot"></span>Hacker News</span>
+            <span class="platform-tag" data-src="github"><span class="dot"></span>GitHub</span>
+            <span class="platform-tag" data-src="news"><span class="dot"></span>News</span>
+            <button class="refresh-btn" onclick="fetchAll()">
+                <span class="icon">&#x21bb;</span> 刷新
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container main">
+    <div id="loadingSection" class="loading-section">
+        <div class="spinner"></div>
+        <div class="loading-text">正在从多个平台抓取热点数据...</div>
+        <div class="loading-steps">
+            <div class="loading-step" data-src="reddit">⬜ Reddit</div>
+            <div class="loading-step" data-src="hackernews">⬜ Hacker News</div>
+            <div class="loading-step" data-src="github">⬜ GitHub Trending</div>
+            <div class="loading-step" data-src="news">⬜ 主流新闻</div>
+        </div>
+    </div>
+
+    <div id="top5Section" style="display:none;"></div>
+
+    <div class="algo-note" id="algoNote" style="display:none;">
+        <strong>交叉验证：</strong>从 Reddit、Hacker News、GitHub、主流新闻获取热点 →
+        关键词提取 + 语义匹配 + 多源出现频率加权 → 跨平台共同关注的 TOP 5
+    </div>
+
+    <footer>
+        今日美国热点 &copy; 2026 &mdash; 数据来源: Reddit &middot; Hacker News &middot; GitHub &middot; News
+    </footer>
+</div>
+
+<script>
+// ========== Utilities ==========
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function formatNumber(n) {
+    if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
+    if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+    return String(n);
+}
+function getDateAgo(d) { const t=new Date(); t.setDate(t.getDate()-d); return t.toISOString().split('T')[0]; }
+function dedupeByTitle(items) {
+    const seen = new Set();
+    return items.filter(it => {
+        const k = it.title.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,50);
+        if (seen.has(k)) return false;
+        seen.add(k); return true;
+    });
+}
+
+// Set header date
+(function(){
+    const now = new Date();
+    const weeks = ['日','一','二','三','四','五','六'];
+    document.getElementById('headerDate').textContent =
+        `${now.getFullYear()} 年 ${now.getMonth()+1} 月 ${now.getDate()} 日 · 星期${weeks[now.getDay()]}`;
+})();
+
+// ========== Loading UI ==========
+function setStepStatus(src, status) {
+    // Loading step
+    const step = document.querySelector(`.loading-step[data-src="${src}"]`);
+    if (step) {
+        step.classList.remove('active','done');
+        const name = step.textContent.replace(/^[⬜⏳✅❌]\s*/,'');
+        if (status==='loading') { step.classList.add('active'); step.textContent = '⏳ '+name; }
+        else if (status==='done') { step.classList.add('done'); step.textContent = '✅ '+name; }
+        else if (status==='error') { step.textContent = '❌ '+name; }
+    }
+    // Toolbar dot
+    const tag = document.querySelector(`.platform-tag[data-src="${src}"] .dot`);
+    if (tag) {
+        tag.className = 'dot';
+        if (status==='loading') tag.classList.add('loading');
+        else if (status==='done') tag.classList.add('ok');
+        else if (status==='error') tag.classList.add('err');
+    }
+}
+
+// ========== Data Fetching ==========
+async function fetchReddit() {
+    setStepStatus('reddit','loading');
+    try {
+        const subs = ['popular','news','worldnews','technology'];
+        const results = [];
+        for (const sub of subs) {
+            try {
+                const r = await fetch(`https://www.reddit.com/r/${sub}/hot.json?limit=10&t=day`,
+                    { headers:{'User-Agent':'TrendingHub/1.0'} });
+                if (!r.ok) continue;
+                const d = await r.json();
+                d.data.children.forEach(c => results.push({
+                    title: c.data.title, score: c.data.score,
+                    comments: c.data.num_comments,
+                    url: `https://reddit.com${c.data.permalink}`,
+                    subreddit: c.data.subreddit
+                }));
+            } catch(e){}
+        }
+        const unique = dedupeByTitle(results);
+        unique.sort((a,b)=>b.score-a.score);
+        setStepStatus('reddit','done');
+        return { source:'reddit', items: unique.slice(0,15) };
+    } catch(e) {
+        setStepStatus('reddit','error');
+        return { source:'reddit', items:[], error:e.message };
+    }
+}
+
+async function fetchHackerNews() {
+    setStepStatus('hackernews','loading');
+    try {
+        const r = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+        const ids = await r.json();
+        const stories = await Promise.all(
+            ids.slice(0,20).map(id =>
+                fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`).then(r=>r.json()).catch(()=>null)
+            )
+        );
+        const items = stories.filter(s=>s&&s.title).map(s=>({
+            title: s.title, score: s.score||0, comments: s.descendants||0,
+            url: s.url || `https://news.ycombinator.com/item?id=${s.id}`
+        }));
+        setStepStatus('hackernews','done');
+        return { source:'hackernews', items: items.slice(0,15) };
+    } catch(e) {
+        setStepStatus('hackernews','error');
+        return { source:'hackernews', items:[], error:e.message };
+    }
+}
+
+async function fetchGitHub() {
+    setStepStatus('github','loading');
+    try {
+        const r = await fetch('https://api.github.com/search/repositories?q=created:>'+getDateAgo(7)+'&sort=stars&order=desc&per_page=20');
+        if (!r.ok) throw new Error('GitHub API error');
+        const d = await r.json();
+        const items = d.items.filter(r=>r.stargazers_count<200000).map(r=>({
+            title: `${r.full_name}: ${r.description||''}`.slice(0,120),
+            score: r.stargazers_count, comments: r.open_issues_count,
+            url: r.html_url, language: r.language
+        }));
+        setStepStatus('github','done');
+        return { source:'github', items: items.slice(0,15) };
+    } catch(e) {
+        setStepStatus('github','error');
+        return { source:'github', items:[], error:e.message };
+    }
+}
+
+async function fetchNews() {
+    setStepStatus('news','loading');
+    try {
+        const results = [];
+        try {
+            const r = await fetch('https://www.reddit.com/r/news+worldnews+politics/top.json?limit=15&t=day',
+                { headers:{'User-Agent':'TrendingHub/1.0'} });
+            if (r.ok) {
+                const d = await r.json();
+                d.data.children.forEach(c => {
+                    if (c.data.domain && !c.data.domain.includes('reddit.com')) {
+                        results.push({
+                            title: c.data.title, score: c.data.score,
+                            comments: c.data.num_comments,
+                            url: c.data.url, domain: c.data.domain
+                        });
+                    }
+                });
+            }
+        } catch(e){}
+        setStepStatus('news', results.length>0?'done':'error');
+        return { source:'news', items: results.slice(0,15) };
+    } catch(e) {
+        setStepStatus('news','error');
+        return { source:'news', items:[], error:e.message };
+    }
+}
+
+// ========== Cross-Validation ==========
+function extractKeywords(title) {
+    const stop = new Set([
+        'the','a','an','is','are','was','were','be','been','being','have','has','had',
+        'do','does','did','will','would','could','should','may','might','shall','can',
+        'to','of','in','for','on','with','at','by','from','as','into','through','during',
+        'before','after','above','below','between','out','off','over','under','again',
+        'further','then','once','here','there','when','where','why','how','all','both',
+        'each','few','more','most','other','some','such','no','nor','not','only','own',
+        'same','so','than','too','very','just','about','up','it','its','he','she','they',
+        'them','their','this','that','these','those','i','me','my','we','our','you','your',
+        'what','which','who','whom','and','but','or','if','while','because','until','new',
+        'says','said','also','like','get','got','one','two','first','back','now','even',
+        'still','just','much','many','well','way','may','use','her','his','him','us',
+        'vs','via','per','been','being','going','make','made','take','taken','know',
+        'think','want','need','see','look','find','give','tell','come','go','say',
+        'after','before','over','under','between','show','shows','year','years','people',
+        'time','day','world','could','would','should','really','something','thing','every'
+    ]);
+    return title.toLowerCase().replace(/[^a-z0-9\s\-]/g,' ').split(/\s+/)
+        .filter(w=>w.length>2 && !stop.has(w))
+        .map(w=>w.replace(/^-+|-+$/g,'')).filter(w=>w.length>2);
+}
+
+function calcSimilarity(kw1, kw2) {
+    if (!kw1.length || !kw2.length) return 0;
+    const s1=new Set(kw1), s2=new Set(kw2);
+    let m=0;
+    for (const w of s1) {
+        if (s2.has(w)) m++;
+        for (const w2 of s2) {
+            if (w!==w2 && (w.includes(w2)||w2.includes(w)) && Math.min(w.length,w2.length)>=3) m+=0.5;
+        }
+    }
+    return m / Math.max(s1.size, s2.size);
+}
+
+function crossValidate(allSources) {
+    const all = [];
+    for (const src of allSources)
+        for (const item of src.items)
+            all.push({ ...item, source:src.source, keywords:extractKeywords(item.title) });
+
+    const clusters=[], used=new Set();
+    for (let i=0; i<all.length; i++) {
+        if (used.has(i)) continue;
+        const c = { items:[all[i]], sources:new Set([all[i].source]),
+            keywords:new Set(all[i].keywords), totalScore:all[i].score||0 };
+        used.add(i);
+        for (let j=i+1; j<all.length; j++) {
+            if (used.has(j)) continue;
+            if (calcSimilarity([...c.keywords], all[j].keywords) >= 0.25) {
+                c.items.push(all[j]); c.sources.add(all[j].source);
+                all[j].keywords.forEach(k=>c.keywords.add(k));
+                c.totalScore += all[j].score||0;
+                used.add(j);
+            }
+        }
+        clusters.push(c);
+    }
+
+    clusters.forEach(c => {
+        const sc = c.sources.size;
+        const avg = c.totalScore / c.items.length;
+        const comm = c.items.reduce((s,it)=>s+(it.comments||0),0);
+        c.finalScore = (sc**2)*1000 + avg + comm*0.5;
+        c.sourceCount = sc;
+        c.items.sort((a,b)=>(b.score||0)-(a.score||0));
+        c.bestItem = c.items[0];
+    });
+    clusters.sort((a,b)=>b.finalScore-a.finalScore);
+    return clusters.slice(0,5);
+}
+
+// ========== Category detection ==========
+function detectCategory(keywords, title) {
+    const t = (title+' '+keywords.join(' ')).toLowerCase();
+    const cats = [
+        { keys:['trump','biden','president','congress','senate','democrat','republican','election','vote','political','policy','white house','governor','legislation','impeach','campaign'], label:'政治' },
+        { keys:['war','military','army','ukraine','russia','china','iran','missile','bomb','nato','attack','invasion','defense','weapon','troops','ceasefire','strike','nuclear'], label:'地缘政治 · 军事' },
+        { keys:['ai','artificial','gpt','openai','llm','chatgpt','claude','gemini','machine learning','neural','deep learning','model','anthropic'], label:'人工智能' },
+        { keys:['tech','apple','google','microsoft','amazon','meta','software','app','startup','silicon','chip','semiconductor','crypto','bitcoin','blockchain','computing'], label:'科技' },
+        { keys:['stock','market','economy','inflation','fed','interest rate','gdp','trade','tariff','recession','bank','financial','wall street','dow','nasdaq','earnings'], label:'财经' },
+        { keys:['nba','nfl','mlb','nhl','football','basketball','baseball','soccer','sport','game','player','team','coach','season','champion','playoff','match','espn','athlete'], label:'体育' },
+        { keys:['movie','film','oscar','music','album','celebrity','entertainment','hollywood','netflix','disney','streaming','show','series','actor','singer','concert','award'], label:'娱乐' },
+        { keys:['health','covid','virus','vaccine','disease','medical','hospital','drug','fda','cancer','treatment','mental','doctor','patient'], label:'健康' },
+        { keys:['climate','environment','earthquake','hurricane','flood','fire','weather','tornado','storm','disaster','wildfire'], label:'自然 · 气候' },
+        { keys:['space','nasa','spacex','rocket','mars','moon','satellite','orbit','launch','astronaut','telescope'], label:'太空' },
+        { keys:['github','code','programming','developer','open source','framework','language','release','bug','api','library','repo'], label:'开源 · 开发' },
+    ];
+    let best = null, bestCount = 0;
+    for (const cat of cats) {
+        const count = cat.keys.filter(k => t.includes(k)).length;
+        if (count > bestCount) { bestCount = count; best = cat.label; }
+    }
+    return best || '热门话题';
+}
+
+// ========== Rendering ==========
+function renderTop5(clusters) {
+    const section = document.getElementById('top5Section');
+    const sourceLabels = {
+        reddit:'Reddit', hackernews:'Hacker News', github:'GitHub', news:'News'
+    };
+    const sourceClasses = {
+        reddit:'reddit', hackernews:'hackernews', github:'github', news:'news'
+    };
+
+    let html = '';
+    clusters.forEach((cluster, idx) => {
+        const item = cluster.bestItem;
+        const cat = detectCategory([...cluster.keywords], item.title);
+        const num = String(idx+1).padStart(2,'0');
+
+        // Build summary
+        let summary = '';
+        if (cluster.sourceCount > 1) {
+            summary = `该话题在 ${cluster.sourceCount} 个平台被同时关注，共 ${cluster.items.length} 条相关内容，总互动量达 ${formatNumber(cluster.totalScore)}。`;
+        } else {
+            summary = `热度评分 ${formatNumber(cluster.totalScore)}，${cluster.items[0].comments ? '评论 '+formatNumber(cluster.items[0].comments)+' 条。' : ''}`;
+        }
+        // Add other titles as context
+        if (cluster.items.length > 1) {
+            const others = cluster.items.slice(1,3).map(it => escapeHtml(it.title.slice(0,60))).join('；');
+            summary += ` 相关：${others}`;
+        }
+
+        // Source links
+        const links = [...cluster.sources].map(s => {
+            const matchItem = cluster.items.find(it=>it.source===s);
+            const url = matchItem ? matchItem.url : '#';
+            return `<a href="${url}" target="_blank" rel="noopener" class="${sourceClasses[s]||''}">${sourceLabels[s]||s} →</a>`;
+        }).join('');
+
+        html += `
+        <div class="top-card">
+            <div class="card-rank-bg">${num}</div>
+            <div class="card-body">
+                <div class="card-category">${cat}</div>
+                <div class="card-title">
+                    <a href="${item.url}" target="_blank" rel="noopener">${escapeHtml(item.title)}</a>
+                </div>
+                <div class="card-summary">${summary}</div>
+                <div class="card-sources">${links}</div>
+            </div>
+        </div>`;
+    });
+
+    section.innerHTML = html;
+    section.style.display = 'block';
+}
+
+// ========== Main ==========
+async function fetchAll() {
+    const btn = document.querySelector('.refresh-btn');
+    btn.classList.add('loading');
+    document.getElementById('loadingSection').style.display = 'block';
+    document.getElementById('top5Section').style.display = 'none';
+    document.getElementById('algoNote').style.display = 'none';
+
+    // Reset dots
+    document.querySelectorAll('.platform-tag .dot').forEach(d => d.className='dot');
+    document.querySelectorAll('.loading-step').forEach(el => {
+        el.classList.remove('active','done');
+        el.textContent = '⬜ ' + el.textContent.replace(/^[⬜⏳✅❌]\s*/,'');
+    });
+
+    try {
+        const [reddit, hn, github, news] = await Promise.all([
+            fetchReddit(), fetchHackerNews(), fetchGitHub(), fetchNews()
+        ]);
+        const allSources = [reddit, hn, github, news];
+        const top5 = crossValidate(allSources);
+
+        document.getElementById('loadingSection').style.display = 'none';
+        renderTop5(top5);
+        document.getElementById('algoNote').style.display = 'block';
+    } catch(e) {
+        document.getElementById('loadingSection').innerHTML =
+            `<div style="color:#e74c3c;text-align:center;padding:40px;">获取数据失败: ${e.message}</div>`;
+    }
+    btn.classList.remove('loading');
+}
+
+fetchAll();
+</script>
+</body>
+</html>
